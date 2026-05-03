@@ -1,5 +1,7 @@
 # febama
 
+[![R-CMD-check](https://github.com/feng-li/febama/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/feng-li/febama/actions/workflows/R-CMD-check.yaml)
+
 Feature-based Bayesian Forecasting Model Averaging.
 
 `febama` is a framework for density forecast combination with time-varying
@@ -36,6 +38,14 @@ Install the package from GitHub with:
 
 ```r
 devtools::install_github("feng-li/febama")
+```
+
+The core package uses `forecast`, `mvtnorm`, `parallel`, and `tsfeatures`.
+The paper-style S&P 500 volatility example additionally needs optional
+packages:
+
+```r
+install.packages(c("rugarch", "highfrequency", "xts", "stochvol"))
 ```
 
 ## Public API
@@ -106,11 +116,14 @@ summarize_performance(forecasts)
 
 ## S&P 500 Paper Example
 
-The paper's stock-market experiment is implemented in
-`inst/examples/sp500.R`. It expects a CSV with either daily percent log returns
-or daily S&P 500 prices. By default it uses the paper-style settings: one-step
-forecasts, a 1,250-trading-day rolling model window, a 100-day feature window,
-GARCH/RGARCH/SV base models, and the 15 stock-market features from Table 3.
+The paper's stock-market experiment is implemented as reproducible scripts in
+`inst/examples/`. By default these scripts use the paper-style settings:
+one-step forecasts, a 1,250-trading-day rolling model window, a 100-day feature
+window, GARCH/RGARCH/SV base models, and the 15 stock-market features from
+Table 3.
+
+The generated S&P 500 CSV files are written under `data/` and are ignored by
+git. Recreate them locally with the following steps.
 
 Download and transform the daily S&P 500 closes from Yahoo Finance into the
 paper's daily percent log returns:
@@ -132,16 +145,22 @@ This writes `data/sp500_features_all.csv` with all 42 THA features and
 `data/sp500_features_table3.csv` with the 15 stock-market features listed in
 Table 3 of the paper.
 
+Run the paper-style FEBAMA example:
+
 ```sh
 Rscript inst/examples/sp500.R data/sp500_daily_percent_log_returns.csv
 ```
 
-The paper-style volatility models require optional packages: `rugarch`,
-`highfrequency`, `xts`, and `stochvol`. For a plumbing-only run without those
-models:
+For a plumbing-only run without the optional volatility-model packages:
 
 ```sh
-FEBAMA_SP500_FAST=1 Rscript inst/examples/sp500.R path/to/sp500.csv
+FEBAMA_SP500_FAST=1 Rscript inst/examples/sp500.R data/sp500_daily_percent_log_returns.csv
+```
+
+Control the number of rolling origins with `FEBAMA_SP500_ORIGINS`. For example:
+
+```sh
+FEBAMA_SP500_ORIGINS=3 Rscript inst/examples/sp500.R data/sp500_daily_percent_log_returns.csv
 ```
 
 ## Model Summary
@@ -173,7 +192,24 @@ R/
   mcmc.R                # MAP/SGLD/MCMC fitting
   forecast.R            # recursive forecasting and performance summaries
 
+inst/examples/          # S&P 500 download, feature, and forecast scripts
 man/                    # generated package documentation
 docs/                   # methodology notes
 data/                   # saved training artifacts
+tests/testthat/         # focused public API and S&P 500 helper tests
+.github/workflows/      # R CMD check workflow
 ```
+
+## Development
+
+Run the local checks before pushing:
+
+```sh
+Rscript -e "pkgload::load_all('.', quiet = TRUE); testthat::test_dir('tests/testthat')"
+R CMD build .
+R CMD check febama_0.0.0.9000.tar.gz
+```
+
+The GitHub Actions workflow runs `R CMD check` on Linux, macOS, Windows, and
+R-devel. Local S&P 500 data outputs are intentionally ignored so the repository
+contains reproducible scripts rather than downloaded market data.
