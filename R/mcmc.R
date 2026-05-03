@@ -52,7 +52,7 @@ febama_mcmc <- function(data, model_conf)
             OUT[["betaIdx"]][[iComp]][1, 1] = 1
         }else if(varSelArgs[[iComp]]$init == "random")
         {
-            OUT[["betaIdx"]][[iComp]][1, ] = c(1, rbinom(nFeat, 1, 0.5)) # intercept is always in.
+            OUT[["betaIdx"]][[iComp]][1, ] = c(1, stats::rbinom(nFeat, 1, 0.5)) # intercept is always in.
         }else
         {
             stop("No such init for betaIdx!")
@@ -63,12 +63,12 @@ febama_mcmc <- function(data, model_conf)
     }
 
     betaIdx_curr = lapply(OUT[["betaIdx"]], function(x) x[1,])
-    beta_curr = lapply(betaIdx_curr, function(x) rnorm(length(x)))
+    beta_curr = lapply(betaIdx_curr, function(x) stats::rnorm(length(x)))
 
     ## Numeric optimization to obtain MAP (Maximum a Posteriori)
     if(algArgs$initOptim == TRUE)
     {
-        beta_optim = optim(unlist(beta_curr), fn = log_posterior,
+        beta_optim = stats::optim(unlist(beta_curr), fn = log_posterior,
                            data = data,
                            betaIdx = betaIdx_curr,
                            priArgs = priArgs,
@@ -147,9 +147,9 @@ MAP_gibbs <- function(data, beta_curr, betaIdx_curr, model_conf)
     {
         nPar_full = length(betaIdx_curr[[iComp]])
 
-        betaIdx_prop[[iComp]] = c(1, rbinom(nPar_full - 1, 1, prob = 0.5))
+        betaIdx_prop[[iComp]] = c(1, stats::rbinom(nPar_full - 1, 1, prob = 0.5))
 
-        beta_optim = optim(unlist(beta_prop[[iComp]]), fn = log_posterior_comp,
+        beta_optim = stats::optim(unlist(beta_prop[[iComp]]), fn = log_posterior_comp,
                            data = data,
                            beta = beta_prop,
                            betaIdx = betaIdx_prop,
@@ -200,7 +200,7 @@ MAP_gibbs <- function(data, beta_curr, betaIdx_curr, model_conf)
                 accept_prob_curr <- exp(min(0, logMHRatio))
             }
 
-            if(runif(1) < accept_prob_curr) #!is.na(accept.prob.curr)
+            if(stats::runif(1) < accept_prob_curr) #!is.na(accept.prob.curr)
             {  ## keep the proposal
                 beta_curr[[iComp]] <- beta_prop[[iComp]]
                 betaIdx_curr[[iComp]] <- betaIdx_prop[[iComp]]
@@ -242,7 +242,7 @@ SGLD_gibbs <- function(data, beta_curr, betaIdx_curr, model_conf)
   
   max_batchSize = model_conf$algArgs$sgld$max_batchSize
   batchSize = min(nObs, max_batchSize)
-  Batch = round(nObs/batchSize)
+  nBatch = round(nObs/batchSize)
   nEpoch = round(200 / nBatch)
   
   num_models_updated = ncol(data$lpd) - 1
@@ -259,7 +259,7 @@ SGLD_gibbs <- function(data, beta_curr, betaIdx_curr, model_conf)
     ## variable selection is enabled: NOT NULL.
     if(length(model_conf$varSelArgs[[iComp]]$cand) > 0)
     {
-      betaIdx_prop[[iComp]] = c(1, rbinom(nPar_full - 1, 1, prob = 0.5))
+      betaIdx_prop[[iComp]] = c(1, stats::rbinom(nPar_full - 1, 1, prob = 0.5))
     }
     
     ## 2. conditional on this variable selection indicators, update beta via SGLD
@@ -346,7 +346,7 @@ SGLD_gibbs <- function(data, beta_curr, betaIdx_curr, model_conf)
         accept_prob_curr <- exp(min(0, logMHRatio))
       }
       
-      if(runif(1) < accept_prob_curr) #!is.na(accept.prob.curr)
+      if(stats::runif(1) < accept_prob_curr) #!is.na(accept.prob.curr)
       {  ## keep the proposal
         beta_curr[[iComp]] <- beta_prop[[iComp]]
         betaIdx_curr[[iComp]] <- betaIdx_prop[[iComp]]

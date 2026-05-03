@@ -41,8 +41,6 @@ library("mvtnorm")
 library("base")
 library("MASS")
 library(parallel)
-library(doParallel)
-library(foreach)
 
 
 #################
@@ -105,20 +103,6 @@ model_conf_NoFeat[["varSelArgs"]] = rep(list(list(cand = NULL, init = "all-in"))
 ## Experiments ##
 model_conf_curr = model_conf_default
 
-# cl <- makeCluster(parallel::detectCores())
-# #cl <- makeCluster(3)
-# registerDoParallel(cl)
-# # clusterEvalQ(cl,{
-# #   library("M4metalearning")
-# # })
-# #clusterExport(cl, model_conf_curr$fore_model)
-# t1 = proc.time()
-# OUT <- foreach(i_ts = 1:36, .packages = "M4metalearning", .export = model_conf_curr$fore_model) %dopar%
-#   febama_mcmc(data = lpd_features3[[i_ts]], model_conf = model_conf_curr, detail_out = T)
-# cat("The time of febama_mcmc is")
-# proc.time()-t1
-# stopCluster(cl)
-
 t1 = proc.time()
 OUT = mclapply(lpd_features3[1:36], febama_mcmc, model_conf = model_conf_curr, detail_out = T,
                mc.cores = 36)
@@ -140,18 +124,6 @@ RES = mcmapply(forecast_feature_results_multi, ts = M4[index3][1:36],
 
 cat("The time of forecast is")
 proc.time()-t2
-
-# cl <- makeCluster(parallel::detectCores())
-# registerDoParallel(cl)
-# t2 = proc.time()
-# RES <- foreach(i_ts = 1:36, .packages = "M4metalearning", .export = model_conf_curr$fore_model) %dopar%
-#   forecast_feature_results_multi(ts = M4[[(index3[i_ts])]], 
-#                                  model_conf = model_conf_curr, 
-#                                  data = lpd_features3[[i_ts]], 
-#                                  beta_out = OUT[[i_ts]])
-# cat("The time of forecast is")
-# proc.time()-t2
-# stopCluster(cl)
 
 forecast_feature_performance(data = RES)
 

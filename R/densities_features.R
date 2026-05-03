@@ -1,3 +1,72 @@
+tha_heterogeneity <- function(x) {
+    output <- c(arch_acf = 0, garch_acf = 0, arch_r2 = 0, garch_r2 = 0)
+    try(output <- tsfeatures::heterogeneity(x), silent = TRUE)
+    output
+}
+
+tha_hw_parameters <- function(x) {
+    hw_fit <- NULL
+    hw_fit$par <- c(NA, NA, NA)
+    try(hw_fit <- forecast::ets(x, model = c("AAA")), silent = TRUE)
+    names(hw_fit$par) <- c("hw_alpha", "hw_beta", "hw_gamma")
+    hw_fit$par[1:3]
+}
+
+add_feature_columns <- function(features, values, before = NULL) {
+    values <- as.data.frame(values, check.names = FALSE)
+    if (is.null(before)) {
+        return(cbind(features, values))
+    }
+
+    cbind(features[seq_len(before - 1)], values, features[before:ncol(features)])
+}
+
+tha_features <- function(dataset) {
+    feature_functions <- list(
+        tsfeatures::acf_features,
+        tsfeatures::arch_stat,
+        tsfeatures::crossing_points,
+        tsfeatures::entropy,
+        tsfeatures::flat_spots,
+        tha_heterogeneity,
+        tsfeatures::holt_parameters,
+        tsfeatures::hurst,
+        tsfeatures::lumpiness,
+        tsfeatures::nonlinearity,
+        tsfeatures::pacf_features,
+        tsfeatures::stl_features,
+        tsfeatures::stability,
+        tha_hw_parameters,
+        tsfeatures::unitroot_kpss,
+        tsfeatures::unitroot_pp
+    )
+
+    lapply(dataset, function(serdat) {
+        tryCatch({
+            featrow <- tsfeatures::tsfeatures(serdat$x, features = feature_functions)
+            featrow <- add_feature_columns(
+                featrow,
+                list(series_length = length(serdat$x))
+            )
+            featrow[is.na(featrow)] <- 0
+            if (length(featrow) == 37) {
+                featrow <- add_feature_columns(featrow, list(seas_acf1 = 0), before = 7)
+                featrow <- add_feature_columns(featrow, list(seas_pacf = 0), before = 24)
+                featrow <- add_feature_columns(
+                    featrow,
+                    list(seasonal_strength = 0, peak = 0, trough = 0),
+                    before = 33
+                )
+            }
+            serdat$features <- featrow
+            serdat
+        }, error = function(e) {
+            print(e)
+            e
+        })
+    })
+}
+
 #' Compute log predictive densities and features
 #' 
 #' Compute log predictive densities and features for training in FEBAMA framework.
@@ -67,27 +136,29 @@ lpd_features_multi <- function(data, model_conf) {
                 t_seqs[[i]] = t_seq[(num_block*(i-1) + 1): length(t_seq)]
             }
         }
-        # lpd_features0 = mclapply(t_block, lpd_feat, ts_sd = y1, ts_nosd = y, 
-        #                         model_conf = model_conf, mc.cores = ncores)
-        cl <- makeCluster(ncores)
-        registerDoParallel(cl)
-       
-        lpd_features0 = foreach::foreach(i = 1:ncores, .packages = c("rugarch","M4metalearning"), 
-                                         .export = c("lpd_feat", model_conf$fore_model))%dopar%
-            ## "R.utils"
-            # withTimeout({
-            #     lpd_feat(t_seq = t_seqs[[i]], ts_sd = y1, ts_nosd = y,
-            #          model_conf = model_conf, history_burn = history_burn)
-            # }, timeout = 30.00, substitute = FALSE, onTimeout = "error",
-            # TimeoutException = function(ex) {
-            #     options(warn = 1)
-            #     warning("Timeout in part: ", i)
-            # })
-            lpd_feat(t_seq = t_seqs[[i]], ts_sd = y1, ts_nosd = y,
-                     model_conf = model_conf, history_burn = history_burn)
-        stopCluster(cl)
-        # lpd_features0 = lapply(t_seqs, lpd_feat, ts_sd = y1, ts_nosd = y, 
-        #                        model_conf = model_conf)
+        cl <- parallel::makeCluster(ncores)
+        on.exit(parallel::stopCluster(cl), add = TRUE)
+        parallel::clusterExport(
+            cl,
+            varlist = c(
+                "add_feature_columns", "lpd_feat", "tha_features",
+                "tha_heterogeneity", "tha_hw_parameters", model_conf$fore_model
+            ),
+            envir = environment(lpd_features_multi)
+        )
+
+        lpd_features0 <- parallel::parLapply(
+            cl,
+            t_seqs,
+            function(t_seq_curr, ts_sd, ts_nosd, model_conf, history_burn) {
+                lpd_feat(t_seq = t_seq_curr, ts_sd = ts_sd, ts_nosd = ts_nosd,
+                         model_conf = model_conf, history_burn = history_burn)
+            },
+            ts_sd = y1,
+            ts_nosd = y,
+            model_conf = model_conf,
+            history_burn = history_burn
+        )
         lpds = lapply(lpd_features0, function(x) x$lpd)
         feats = lapply(lpd_features0, function(x) x$feat)
         lpd_features = list(lpd = do.call(rbind, lpds), feat = do.call(rbind, feats))
@@ -130,7 +201,7 @@ lpd_feat = function(t_seq, ts_sd, ts_nosd, model_conf, history_burn ){
             return(mean_sd)
         })
         log_pred_den <- lapply(use_model, function(mean_sd){
-            lpd <- sum(dnorm(y1[(t + 1):(t + train_h)],
+            lpd <- sum(stats::dnorm(y1[(t + 1):(t + train_h)],
                              mean = mean_sd[[1]],sd = mean_sd[[2]],log = TRUE ))
             return(lpd)
         })
@@ -146,14 +217,14 @@ lpd_feat = function(t_seq, ts_sd, ts_nosd, model_conf, history_burn ){
     ## Calculate historical features
     y = ts_nosd
     features_y <- matrix(nrow = length(t_seq), ncol = 42)
-    myts <- list(list(x = ts(y[1:history_burn], frequency = frequency)))
-    colnames(features_y) <- colnames(M4metalearning::THA_features(myts)[[1]]$features)
+    myts <- list(list(x = stats::ts(y[1:history_burn], frequency = frequency)))
+    colnames(features_y) <- colnames(tha_features(myts)[[1]]$features)
     
     if(is.null(feature_window)){
         for (t in t_seq)
         {
-            myts <- list(list(x = ts(y[1:t], frequency = frequency)))
-            myfeatures <- M4metalearning::THA_features(myts)[[1]]$features
+            myts <- list(list(x = stats::ts(y[1:t], frequency = frequency)))
+            myfeatures <- tha_features(myts)[[1]]$features
             myfeatures <- data.matrix(myfeatures)
             features_y[(t - t_seq[1] + 1),] <- myfeatures
         }
@@ -161,12 +232,12 @@ lpd_feat = function(t_seq, ts_sd, ts_nosd, model_conf, history_burn ){
         for (t in t_seq)
         {
             if(t <= feature_window){
-                myts <-list(list(x=ts(y[1:t], frequency = 1)))
-                myfeatures <- M4metalearning::THA_features(myts)[[1]]$features
+                myts <-list(list(x=stats::ts(y[1:t], frequency = 1)))
+                myfeatures <- tha_features(myts)[[1]]$features
                 myfeatures <- data.matrix(myfeatures)
             }else{
-                myts <-list(list(x=ts(y[(t-feature_window+1):t], frequency = 1)))
-                myfeatures <- M4metalearning::THA_features(myts)[[1]]$features
+                myts <-list(list(x=stats::ts(y[(t-feature_window+1):t], frequency = 1)))
+                myfeatures <- tha_features(myts)[[1]]$features
                 myfeatures <- data.matrix(myfeatures)
             }
             features_y[(t - t_seq[1] + 1),] <- myfeatures

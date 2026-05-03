@@ -19,11 +19,8 @@ License: GPL (>=2.0)
 Depends: R (>= 3.2.0)
 Imports:
     forecast,
-    M4metalearning,
     mvtnorm,
     parallel,
-    doParallel,
-    foreach,
     tsfeatures
 Encoding: UTF-8
 LazyData: true

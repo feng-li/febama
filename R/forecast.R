@@ -26,7 +26,7 @@
 #' }
 #' @export
 
-forecast_feature_results_multi <-function(ts, model_conf = model_conf_curr, intercept = T,
+forecast_feature_results_multi <-function(ts, model_conf = model_conf_default(), intercept = T,
                                           data, beta_out)
 {
     feature_window = model_conf$feature_window
@@ -82,15 +82,15 @@ forecast_feature_results_multi <-function(ts, model_conf = model_conf_curr, inte
     {
         ## Update features
         if(!is.null(feature_window)){
-            y_new_nonsd1 <- tail(y_new_nonsd, feature_window)
+            y_new_nonsd1 <- utils::tail(y_new_nonsd, feature_window)
         }else{
             y_new_nonsd1 <- y_new_nonsd
         }
 
         if (!is.null(features_y))
         {
-            myts <- list(list(x = ts(y_new_nonsd1, frequency = frequency)))
-            myfeatures <- M4metalearning::THA_features(myts)[[1]]$features
+            myts <- list(list(x = stats::ts(y_new_nonsd1, frequency = frequency)))
+            myfeatures <- tha_features(myts)[[1]]$features
             myfeatures <- data.matrix(myfeatures)
             myfeatures <- myfeatures[, colnames(myfeatures) %in% colnames(features_y)]
             myfeatures_scaled = scale(t(myfeatures),
@@ -114,7 +114,7 @@ forecast_feature_results_multi <-function(ts, model_conf = model_conf_curr, inte
         if(is.null(roll)){
             y_new1 <- y_new
         }else{
-            y_new1 <- tail(y_new, roll)
+            y_new1 <- utils::tail(y_new, roll)
         }
 
         multi_fore <- lapply(fore_model, function(method){
@@ -133,7 +133,7 @@ forecast_feature_results_multi <-function(ts, model_conf = model_conf_curr, inte
 
         ## The predictive log score
         pd_multi <- sapply(multi_fore, function(mean_sd){
-            dnorm(y01_true[t], mean = mean_sd[[1]], sd = mean_sd[[2]], log = F)
+            stats::dnorm(y01_true[t], mean = mean_sd[[1]], sd = mean_sd[[2]], log = F)
         })
         lpds_multi = log(sum(pd_multi * w_full_mean))
 

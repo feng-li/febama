@@ -111,7 +111,7 @@ For each historical cutoff, FEBAMA:
 1. fits each base forecaster in `config$fore_model`;
 2. evaluates each model's Gaussian predictive density for the next holdout
    point;
-3. computes time-series features using `M4metalearning::THA_features()`;
+3. computes the THA time-series feature set using `tsfeatures`;
 4. estimates feature coefficients by maximizing or sampling the log predictive
    score with coefficient priors and optional feature-selection indicators.
 

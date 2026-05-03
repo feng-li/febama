@@ -58,7 +58,7 @@ log_priors <- function(beta, betaIdx, varSelArgs, priArgs, sum = TRUE)
                 ## Scott and Berger 2010 in Annals of Statistics Sec 3.2.
                 prob <- priArgs[["prob"]]
                 probMat <- matrix(prob, length(candIdx), 1) # TRUE or FALSE of variable selection candidates
-                logDens <- sum(dbinom(x = as.numeric(varSelCandTF), size = 1,
+                logDens <- sum(stats::dbinom(x = as.numeric(varSelCandTF), size = 1,
                                       prob = probMat, log = TRUE))
             }
             else if(tolower(priArgsCurr[["betaIdx"]][["type"]]) == "beta") # beta prior

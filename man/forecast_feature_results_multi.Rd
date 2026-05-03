@@ -6,7 +6,7 @@
 \usage{
 forecast_feature_results_multi(
   ts,
-  model_conf = model_conf_curr,
+  model_conf = model_conf_default(),
   intercept = T,
   data,
   beta_out
