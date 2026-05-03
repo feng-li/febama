@@ -43,20 +43,7 @@ febama_mcmc <- function(data, model_conf)
         OUT[["betaIdx"]][[iComp]] = matrix(NA, nIter, nFeat + 1)
 
         ## Initialize variable selection indicators
-        if(varSelArgs[[iComp]]$init == "all-in")
-        {
-            OUT[["betaIdx"]][[iComp]][1, ] = 1
-        }else if (varSelArgs[[iComp]]$init == "all-out")
-        {
-            OUT[["betaIdx"]][[iComp]][1, ] = 0
-            OUT[["betaIdx"]][[iComp]][1, 1] = 1
-        }else if(varSelArgs[[iComp]]$init == "random")
-        {
-            OUT[["betaIdx"]][[iComp]][1, ] = c(1, stats::rbinom(nFeat, 1, 0.5)) # intercept is always in.
-        }else
-        {
-            stop("No such init for betaIdx!")
-        }
+        OUT[["betaIdx"]][[iComp]][1, ] = initialize_beta_idx(nFeat + 1, varSelArgs[[iComp]])
 
         ## Reserve space for acceptance probabilities with MH corrections
         OUT[["accept_prob"]][[iComp]] = matrix(1, nIter, 1)
@@ -68,18 +55,17 @@ febama_mcmc <- function(data, model_conf)
     ## Numeric optimization to obtain MAP (Maximum a Posteriori)
     if(algArgs$initOptim == TRUE)
     {
-        beta_optim = stats::optim(unlist(beta_curr), fn = log_posterior,
-                           data = data,
-                           betaIdx = betaIdx_curr,
-                           priArgs = priArgs,
-                           varSelArgs = varSelArgs,
-                           features_used = model_conf$features_used,
-                           method = "BFGS",
-                           control = list(fnscale = -1, maxit = 1000))
+        beta_optim = optimize_map_coefficients(data = data,
+                                               beta = beta_curr,
+                                               betaIdx = betaIdx_curr,
+                                               priArgs = priArgs,
+                                               varSelArgs = varSelArgs,
+                                               features_used = model_conf$features_used,
+                                               model_update = seq_along(betaIdx_curr))
         if( beta_optim$convergence != 0){
             stop("The optimization of initial values is not convergent")
         }
-        beta_curr = betaVec2Lst(beta_optim$par, betaIdx_curr)
+        beta_curr = beta_optim$beta
     }
 
     ## Assign initial values (conditional of variable selections)
@@ -147,30 +133,28 @@ MAP_gibbs <- function(data, beta_curr, betaIdx_curr, model_conf)
     {
         nPar_full = length(betaIdx_curr[[iComp]])
 
-        if(length(model_conf$varSelArgs[[iComp]]$cand) > 0)
+        candIdx = resolve_varsel_candidates(nPar_full, model_conf$varSelArgs[[iComp]]$cand)
+        if(length(candIdx) > 0)
         {
-            betaIdx_prop[[iComp]] = c(1, stats::rbinom(nPar_full - 1, 1, prob = 0.5))
+            betaIdx_prop[[iComp]][candIdx] = stats::rbinom(length(candIdx), 1, prob = 0.5)
+            betaIdx_prop[[iComp]][1] = 1
         }
 
-        beta_optim = stats::optim(unlist(beta_prop[[iComp]]), fn = log_posterior_comp,
-                           data = data,
-                           beta = beta_prop,
-                           betaIdx = betaIdx_prop,
-                           priArgs = priArgs,
-                           varSelArgs = varSelArgs,
-                           features_used = model_conf$features_used,
-                           model_update = iComp,
-                           method = "BFGS",
-                           control = list(fnscale = -1, maxit = 1000))
+        beta_optim = optimize_map_coefficients(data = data,
+                                               beta = beta_prop,
+                                               betaIdx = betaIdx_prop,
+                                               priArgs = priArgs,
+                                               varSelArgs = varSelArgs,
+                                               features_used = model_conf$features_used,
+                                               model_update = iComp)
         if( beta_optim$convergence != 0){
           stop("The optimization of MAP is not convergent")
         }
         
-        beta_prop[[iComp]] = beta_optim$par
-        beta_prop[[iComp]][betaIdx_prop[[iComp]] == 0] = 0
+        beta_prop = beta_optim$beta
 
         ## Metropolis-Hasting accept/reject for variable selection
-        if(length(model_conf$varSelArgs[[iComp]]$cand) > 0)
+        if(length(candIdx) > 0)
         {
             log_post_prop = log_posterior(data = data,
                                           beta = beta_prop,
@@ -261,9 +245,11 @@ SGLD_gibbs <- function(data, beta_curr, betaIdx_curr, model_conf)
     
     ## 1. propose an update of variable selection indicators. Random proposal when
     ## variable selection is enabled: NOT NULL.
-    if(length(model_conf$varSelArgs[[iComp]]$cand) > 0)
+    candIdx = resolve_varsel_candidates(nPar_full, model_conf$varSelArgs[[iComp]]$cand)
+    if(length(candIdx) > 0)
     {
-      betaIdx_prop[[iComp]] = c(1, stats::rbinom(nPar_full - 1, 1, prob = 0.5))
+      betaIdx_prop[[iComp]][candIdx] = stats::rbinom(length(candIdx), 1, prob = 0.5)
+      betaIdx_prop[[iComp]][1] = 1
     }
     
     ## 2. conditional on this variable selection indicators, update beta via SGLD
@@ -314,7 +300,7 @@ SGLD_gibbs <- function(data, beta_curr, betaIdx_curr, model_conf)
     beta_sgld[[iComp]] = beta_iComp_sgld
     
     ## Metropolis-Hasting accept/reject for variable selection
-    if(length(model_conf$varSelArgs[[iComp]]$cand) > 0)
+    if(length(candIdx) > 0)
     {
       log_post_prop = log_posterior(data = data,
                                     beta = beta_prop,
@@ -373,6 +359,165 @@ SGLD_gibbs <- function(data, beta_curr, betaIdx_curr, model_conf)
   out = list(beta = beta_curr, betaIdx = betaIdx_curr, 
              accept_prob = accept_prob, beta_sgld = beta_sgld)
   return(out)
+}
+
+initialize_beta_idx <- function(nPar, varSelArg)
+{
+  idx = rep(1, nPar)
+  candIdx = resolve_varsel_candidates(nPar, varSelArg$cand)
+  if(length(candIdx) == 0)
+  {
+    return(idx)
+  }
+
+  init = varSelArg$init
+  if(length(init) == 0 || is.na(init))
+  {
+    init = "all-in"
+  }
+
+  if(init == "all-in")
+  {
+    idx[candIdx] = 1
+  }
+  else if(init == "all-out")
+  {
+    idx[candIdx] = 0
+  }
+  else if(init == "random")
+  {
+    idx[candIdx] = stats::rbinom(length(candIdx), 1, 0.5)
+  }
+  else
+  {
+    stop("No such init for betaIdx!", call. = FALSE)
+  }
+
+  idx[1] = 1
+  idx
+}
+
+resolve_varsel_candidates <- function(nPar, cand)
+{
+  if(is.null(cand) || length(cand) == 0)
+  {
+    return(integer())
+  }
+
+  if(length(cand) == 1 && is.character(cand) && tolower(cand) == "2:end")
+  {
+    if(nPar < 2)
+    {
+      return(integer())
+    }
+    return(seq.int(2, nPar))
+  }
+
+  if(!is.numeric(cand) && !is.integer(cand))
+  {
+    stop("Variable-selection candidates must be numeric indices or \"2:end\".",
+         call. = FALSE)
+  }
+
+  candIdx = as.integer(cand)
+  if(any(is.na(candIdx)) || any(candIdx != cand) ||
+     any(candIdx < 1) || any(candIdx > nPar))
+  {
+    stop("Variable-selection candidate indices are out of range.", call. = FALSE)
+  }
+
+  sort(unique(setdiff(candIdx, 1L)))
+}
+
+active_beta_vector <- function(beta, betaIdx, model_update = seq_along(betaIdx))
+{
+  unlist(lapply(model_update, function(iComp) {
+    beta[[iComp]][betaIdx[[iComp]] == 1]
+  }), use.names = FALSE)
+}
+
+replace_active_beta <- function(beta, betaIdx, par, model_update = seq_along(betaIdx))
+{
+  start = 1L
+  for(iComp in model_update)
+  {
+    active = betaIdx[[iComp]] == 1
+    nActive = sum(active)
+    if(nActive > 0)
+    {
+      end = start + nActive - 1L
+      beta[[iComp]][active] = par[start:end]
+      start = end + 1L
+    }
+    beta[[iComp]][!active] = 0
+  }
+  beta
+}
+
+log_posterior_active <- function(par,
+                                 data,
+                                 beta,
+                                 betaIdx,
+                                 priArgs,
+                                 varSelArgs,
+                                 features_used,
+                                 model_update)
+{
+  beta_full = replace_active_beta(beta, betaIdx, par, model_update)
+  log_posterior(data = data,
+                beta = beta_full,
+                betaIdx = betaIdx,
+                priArgs = priArgs,
+                varSelArgs = varSelArgs,
+                features_used = features_used,
+                model_update = model_update)
+}
+
+log_posterior_active_grad <- function(par,
+                                      data,
+                                      beta,
+                                      betaIdx,
+                                      priArgs,
+                                      varSelArgs,
+                                      features_used,
+                                      model_update)
+{
+  beta_full = replace_active_beta(beta, betaIdx, par, model_update)
+  grad = log_posterior_grad(data = data,
+                            beta = beta_full,
+                            betaIdx = betaIdx,
+                            priArgs = priArgs,
+                            varSelArgs = varSelArgs,
+                            features_used = features_used,
+                            model_update = model_update)
+  as.numeric(unlist(grad, use.names = FALSE))
+}
+
+optimize_map_coefficients <- function(data,
+                                      beta,
+                                      betaIdx,
+                                      priArgs,
+                                      varSelArgs,
+                                      features_used,
+                                      model_update,
+                                      maxit = 1000)
+{
+  par = active_beta_vector(beta, betaIdx, model_update)
+  beta_template = beta
+  out = stats::optim(par = par,
+                     fn = log_posterior_active,
+                     gr = log_posterior_active_grad,
+                     data = data,
+                     beta = beta_template,
+                     betaIdx = betaIdx,
+                     priArgs = priArgs,
+                     varSelArgs = varSelArgs,
+                     features_used = features_used,
+                     model_update = model_update,
+                     method = "BFGS",
+                     control = list(fnscale = -1, maxit = maxit))
+  out$beta = replace_active_beta(beta_template, betaIdx, out$par, model_update)
+  out
 }
 
 validate_sgld_settings <- function(nObs, sgldArgs)

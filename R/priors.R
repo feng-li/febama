@@ -32,23 +32,14 @@ log_priors <- function(beta, betaIdx, varSelArgs, priArgs, sum = TRUE)
         ## Variable section candidates checking. If (1) only intercept is in or (2)
         ## updating candidates is NULL, do not allow for variable selection. We do not
         ## need a prior;
-        if(length(betaIdxCurr) == 1 | length(varSelCand) == 0) # intercept is always included.
+        candIdx <- resolve_varsel_candidates(length(betaIdxCurr), varSelCand)
+        if(length(betaIdxCurr) == 1 | length(candIdx) == 0) # intercept is always included.
         {
             candIdx <- NULL
             logDens <- NULL
         }
         else
         {
-            if(class(varSelCand) == "character" &&
-               tolower(varSelCand) == "2:end")
-            {
-                candIdx <- 2:length(beta[[iComp]])
-            }
-            else
-            {
-                candIdx <- varSelCand
-            }
-
             ## Priors for variable selection indicators
             varSelCandTF <- betaIdxCurr[candIdx]
 
@@ -56,7 +47,11 @@ log_priors <- function(beta, betaIdx, varSelArgs, priArgs, sum = TRUE)
             {
                 ## Note that independent Bernoulli prior can be very informative. See
                 ## Scott and Berger 2010 in Annals of Statistics Sec 3.2.
-                prob <- priArgs[["prob"]]
+                prob <- priArgsCurr[["betaIdx"]][["prob"]]
+                if(is.null(prob))
+                {
+                    stop("Bernoulli betaIdx prior requires `prob`.", call. = FALSE)
+                }
                 probMat <- matrix(prob, length(candIdx), 1) # TRUE or FALSE of variable selection candidates
                 logDens <- sum(stats::dbinom(x = as.numeric(varSelCandTF), size = 1,
                                       prob = probMat, log = TRUE))

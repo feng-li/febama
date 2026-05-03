@@ -65,7 +65,8 @@ features be computed in parallel?}
 
 \item{variable_selection}{Should feature-selection indicators be sampled?}
 
-\item{varsel_init}{Initial feature-selection state.}
+\item{varsel_init}{Initial feature-selection state. Ignored when
+\code{variable_selection} is \code{FALSE}.}
 
 \item{beta_shrinkage}{Diagonal covariance scale for the coefficient prior.}
 

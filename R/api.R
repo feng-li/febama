@@ -20,7 +20,8 @@
 #' @param ncores Number of worker cores to use when `lpd_features_parallel` is
 #'   `TRUE`.
 #' @param variable_selection Should feature-selection indicators be sampled?
-#' @param varsel_init Initial feature-selection state.
+#' @param varsel_init Initial feature-selection state. Ignored when
+#'   `variable_selection` is `FALSE`.
 #' @param beta_shrinkage Diagonal covariance scale for the coefficient prior.
 #' @param init_optim Should BFGS be used to initialize coefficients?
 #' @param alg_name Inference algorithm, either `"MAP"` or `"sgld"`.
@@ -71,6 +72,9 @@ febama_config <- function(frequency = 12,
     num_models_updated <- length(fore_model) - 1
     features_by_model <- normalize_features_used(features_used, num_models_updated)
     varsel_cand <- if (isTRUE(variable_selection)) "2:end" else NULL
+    if (!isTRUE(variable_selection)) {
+        varsel_init <- "all-in"
+    }
 
     list(
         frequency = frequency,

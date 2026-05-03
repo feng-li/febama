@@ -20,33 +20,10 @@ logscore <- function(data, beta, betaIdx, features_used, sum = TRUE)
     {
         beta = betaVec2Lst(beta, betaIdx)
     }
-    
-    prob = exp(data$lpd)
-    prob[prob == 0] <- 1e-16
 
-    num_models_updated <- length(betaIdx)
-    nObs = nrow(prob)
-
-    exp_lin = matrix(NA, nObs, num_models_updated + 1)
-
-    for(iComp in 1:num_models_updated)
-    {
-        betaCurr = beta[[iComp]]
-        betaIdxCurr = betaIdx[[iComp]]
-        features_used_curr = features_used[[iComp]]
-        features0 = cbind(rep(1, nObs), data$feat[, features_used_curr, drop = FALSE])
-
-        me <- features0[, betaIdxCurr == 1, drop = FALSE] %*% matrix(betaCurr[betaIdxCurr == 1])
-        me[me>709] <- 709 # avoid overflow
-        exp_lin[, iComp] = exp(me)
-    }
-
-    ## Villani, M., Kohn, R., & Giordani, P. (2009). Regression density estimation
-    ## using smooth adaptive Gaussian mixtures. Journal of Econometrics, 153(2),
-    ## 155-173.
-    exp_lin[, num_models_updated + 1] = 1 # assume last model is 1
-    weights <- exp_lin/ rowSums(exp_lin) # T-by-n, assuming last is deterministic
-    out = log(rowSums(weights * prob))
+    eta = febama_linear_predictors(data, beta, betaIdx, features_used)
+    log_weights = sweep(eta, 1, row_logsumexp(eta), "-")
+    out = row_logsumexp(log_weights + data$lpd)
 
     if(sum == TRUE)
     {
@@ -63,34 +40,11 @@ logscore_comp <- function(data, beta_comp, beta, betaIdx, features_used, sum = T
     {
         beta = betaVec2Lst(beta, betaIdx)
     }
-    
-    prob = exp(data$lpd)
-    prob[prob == 0] <- 1e-16
-    
-    num_models_updated <- length(betaIdx)
-    nObs = nrow(prob)
-    
-    exp_lin = matrix(NA, nObs, num_models_updated + 1)
-    
-    for(iComp in 1:num_models_updated)
-    {
-        if(iComp == model_update){
-            betaCurr = beta_comp
-        }else{
-            betaCurr = beta[[iComp]]
-        }
-        betaIdxCurr = betaIdx[[iComp]]
-        features_used_curr = features_used[[iComp]]
-        features0 = cbind(rep(1, nObs), data$feat[, features_used_curr, drop = FALSE])
-        
-        me <- features0[, betaIdxCurr == 1, drop = FALSE] %*% matrix(betaCurr[betaIdxCurr == 1])
-        me[me>709] <- 709 # avoid overflow
-        exp_lin[, iComp] = exp(me)
-    }
-    
-    exp_lin[, num_models_updated + 1] = 1 # assume last model is 1
-    weights <- exp_lin/ rowSums(exp_lin) # T-by-n, assuming last is deterministic
-    out = log(rowSums(weights * prob))
+
+    beta[[model_update]] = beta_comp
+    eta = febama_linear_predictors(data, beta, betaIdx, features_used)
+    log_weights = sweep(eta, 1, row_logsumexp(eta), "-")
+    out = row_logsumexp(log_weights + data$lpd)
     
     if(sum == TRUE)
     {
@@ -104,34 +58,16 @@ logscore_comp <- function(data, beta_comp, beta, betaIdx, features_used, sum = T
 
 logscore_grad <- function(data, beta, betaIdx, features_used, model_update = 1:length(betaIdx))
 {
-
-    prob = exp(data$lpd)
-    prob[prob == 0] <- 1e-16
-
-    num_models_updated <- ncol(prob) - 1
-    nObs = nrow(prob)
-
-    exp_lin = matrix(NA, nObs, num_models_updated + 1)
-    exp_lin[, num_models_updated + 1] = 1 # assume last model is 1
-
-    for(iComp in 1:num_models_updated)
-    {
-        betaCurr = beta[[iComp]]
-        betaIdxCurr = betaIdx[[iComp]]
-        features_used_curr = features_used[[iComp]]
-        features0 = cbind(rep(1, nObs), data$feat[, features_used_curr, drop = FALSE])
-
-        me <- features0[, betaIdxCurr == 1, drop = FALSE] %*% matrix(betaCurr[betaIdxCurr == 1])
-        me[me>709] <- 709 # avoid overflow
-        exp_lin[, iComp] = exp(me)
-    }
-
-    exp_sum = rowSums(exp_lin) # length-T vector
-    exp_p_sum = rowSums(exp_lin * prob) # T-by-1
+    nObs = nrow(data$lpd)
+    eta = febama_linear_predictors(data, beta, betaIdx, features_used)
+    log_weights = sweep(eta, 1, row_logsumexp(eta), "-")
+    log_mix = row_logsumexp(log_weights + data$lpd)
 
     ## The gradient wrt me=x'beta
-    grad0 = exp_lin[, model_update, drop = FALSE] * (prob[, model_update, drop = FALSE] * exp_sum -
-                                      exp_p_sum) / (exp_sum * exp_p_sum) # T-by-length(model_caller)
+    grad0 = exp(log_weights[, model_update, drop = FALSE] +
+                data$lpd[, model_update, drop = FALSE] -
+                log_mix) -
+            exp(log_weights[, model_update, drop = FALSE])
 
     ## The gradient wrt beta
     out = list()
@@ -145,4 +81,34 @@ logscore_grad <- function(data, beta, betaIdx, features_used, model_update = 1:l
         out[[iCompdx]] = colSums(grad0[, iCompdx] * features0[, betaIdxCurr == 1, drop = FALSE])
     }
     return(out)
+}
+
+febama_linear_predictors <- function(data, beta, betaIdx, features_used)
+{
+    num_models_updated <- length(betaIdx)
+    nObs = nrow(data$lpd)
+    eta = matrix(0, nObs, num_models_updated + 1)
+
+    for(iComp in 1:num_models_updated)
+    {
+        betaCurr = beta[[iComp]]
+        betaIdxCurr = betaIdx[[iComp]]
+        features_used_curr = features_used[[iComp]]
+        features0 = cbind(rep(1, nObs), data$feat[, features_used_curr, drop = FALSE])
+
+        me <- features0[, betaIdxCurr == 1, drop = FALSE] %*% matrix(betaCurr[betaIdxCurr == 1])
+        me[me > 709] <- 709 # avoid overflow in downstream exp calls
+        eta[, iComp] = as.numeric(me)
+    }
+
+    eta
+}
+
+row_logsumexp <- function(x)
+{
+    maxes = apply(x, 1, max)
+    shifted = sweep(x, 1, maxes, "-")
+    out = maxes + log(rowSums(exp(shifted)))
+    out[!is.finite(maxes)] = maxes[!is.finite(maxes)]
+    out
 }
