@@ -1,8 +1,7 @@
-# febama
+# `febama`: Feature-based Bayesian Forecasting Model Averaging
 
 [![R-CMD-check](https://github.com/feng-li/febama/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/feng-li/febama/actions/workflows/R-CMD-check.yaml)
 
-Feature-based Bayesian Forecasting Model Averaging.
 
 `febama` is a framework for density forecast combination with time-varying
 weights based on time-series features. Each base model contributes a predictive
