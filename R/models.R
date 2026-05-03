@@ -1,4 +1,4 @@
-#' The forecasting model ETS basd on \code{forecast::ets}
+#' ETS forecasting model based on \code{forecast::ets}
 #'
 #' @param x The input time series.
 #' @param train_h The amount of future time steps to forecast.
@@ -16,7 +16,7 @@ ets_fore <- function(x, train_h, PI_level) {
               ets_fore_sd = as.numeric(ets_fore_sd) ))
 }
 
-#' The forecasting model ARIMA basd on \code{forecast::auto.arima}
+#' ARIMA forecasting model based on \code{forecast::auto.arima}
 #'
 #' @param x The input time series.
 #' @param train_h The amount of future time steps to forecast.
@@ -33,7 +33,7 @@ auto.arima_fore <- function(x, train_h, PI_level) {
               arima_fore_sd = as.numeric(arima_fore_sd) ))
 }
 
-#' The forecasting model naive basd on \code{forecast::naive}
+#' Naive forecasting model based on \code{forecast::naive}
 #'
 #' @param x The input time series.
 #' @param train_h The amount of future time steps to forecast.
@@ -49,7 +49,7 @@ naive_fore <- function(x, train_h, PI_level) {
               naive_fore_sd = as.numeric(naive_fore_sd) ))
 }
 
-#' The forecasting model random walk basd on \code{forecast::rwf}
+#' Random-walk forecasting model based on \code{forecast::rwf}
 #'
 #' @param x The input time series.
 #' @param train_h The amount of future time steps to forecast.
@@ -68,11 +68,11 @@ rw_drift_fore <- function(x, train_h, PI_level) {
 
 
 
-#' The forecasting model garch basd on \code{rugarch} package
+#' GARCH forecasting model based on the \code{rugarch} package
 #'
 #' @param x The input time series.
 #' @param train_h The amount of future time steps to forecast.
-#' @param PI_level This function don't use it in the calculation.
+#' @param PI_level This function does not use it in the calculation.
 #' This is used to make this function consistent with the parameter setting of the top four models.
 #'
 #' @return A list including forecasting mean and sd.
@@ -90,11 +90,11 @@ garch_fore <- function(x, train_h,  PI_level) {
               garch_fore_sd = as.numeric(garch_fore_sd) ))
 }
 
-#' The forecasting model egarch basd on \code{rugarch} package
+#' EGARCH forecasting model based on the \code{rugarch} package
 #'
 #' @param x The input time series.
 #' @param train_h The amount of future time steps to forecast.
-#' @param PI_level This function don't use it in the calculation.
+#' @param PI_level This function does not use it in the calculation.
 #' This is used to make this function consistent with the parameter setting of the top four models.
 #'
 #' @return A list including forecasting mean and sd.
@@ -119,11 +119,11 @@ egarch_fore <- function(x, train_h, PI_level) {
               egarch_fore_sd = as.numeric(egarch_fore_sd) ))
 }
 
-#' The forecasting model realized GARCH basd on \code{rugarch} package
+#' Realized GARCH forecasting model based on the \code{rugarch} package
 #' The realized volatility is represented by the realized variance in this work.
 #' @param x The input time series.
 #' @param train_h The amount of future time steps to forecast.
-#' @param PI_level This function don't use it in the calculation.
+#' @param PI_level This function does not use it in the calculation.
 #' This is used to make this function consistent with the parameter setting of the top four models.
 #'
 #' @return A list including forecasting mean and sd.
@@ -149,11 +149,11 @@ rgarch_fore <- function(x, train_h, PI_level) {
 }
 
 
-#' The forecasting model garch basd on \code{stochvol} package
+#' Stochastic volatility forecasting model based on the \code{stochvol} package
 #'
 #' @param x The input time series.
 #' @param train_h The amount of future time steps to forecast.
-#' @param PI_level This function don't use it in the calculation.
+#' @param PI_level This function does not use it in the calculation.
 #' This is used to make this function consistent with the parameter setting of the top four models.
 #'
 #' @return A list including forecasting mean and sd.
@@ -167,4 +167,3 @@ sv_fore <- function(x, train_h,  PI_level) {
   return(list(sv_fore_mean = as.numeric(sv_fore_mean),
               sv_fore_sd = as.numeric(sv_fore_sd) ))
 }
-

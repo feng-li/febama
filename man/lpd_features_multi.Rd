@@ -7,9 +7,9 @@
 lpd_features_multi(data, model_conf)
 }
 \arguments{
-\item{data}{A list with related information of a time series. Historical data \code{x} is neccessary.}
+\item{data}{A list with related information for a time series. Historical data \code{x} is required.}
 
-\item{model_conf}{Parameter settings of FEBAMA framework. Defualt \code{model_conf_default()}.}
+\item{model_conf}{Parameter settings for the FEBAMA framework. Defaults can be created by \code{model_conf_default()}.}
 }
 \value{
 A list with log predictive densities and features.

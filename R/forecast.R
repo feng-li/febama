@@ -1,4 +1,4 @@
-#' Forecasting with FEBAMA
+#' Forecast with FEBAMA
 #' 
 #' Forecast based on FEBAMA framework and obtain error measures.
 #'
@@ -7,7 +7,8 @@
 #'   \item{x}{Historical data.}
 #'   \item{xx}{Real data in the forecasting horizon.}
 #' }
-#' @param model_conf Parameter settings of FEBAMA framework. Defualt \code{model_conf_default()}.
+#' @param model_conf Parameter settings for the FEBAMA framework. Defaults can be created by \code{model_conf_default()}.
+#' @param intercept Logical; should an intercept be included in the feature-weight model?
 #' @param data A list with
 #' \describe{
 #'   \item{lpd}{Log probability densities from historical data.}
@@ -19,7 +20,7 @@
 #' 
 #' @return \code{forecast_feature_results_multi} returns a list with the entries:  
 #' \describe{
-#'   \item{err_feature}{Log score, mase, smape measures of forecasts.}
+#'   \item{err_feature}{Log score, MASE, and SMAPE measures of forecasts.}
 #'   \item{ff_feature}{Forecast values in the forecasting horizon.}
 #'   \item{w_time_varying}{Time-varying weights in the forecasting horizon.}
 #' }

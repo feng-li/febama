@@ -1,6 +1,6 @@
 #' Calculate the log joint prior
 #'
-#' Calculate the log joint prior of  indicator vectors and  coefficient vectors.
+#' Calculate the log joint prior of indicator vectors and coefficient vectors.
 #' See \code{model_conf_default} for more information of parameter settings.
 #' 
 #' @param beta A list of coefficient vectors of the features.
@@ -220,4 +220,3 @@ log_priors_grad <- function(beta, betaIdx, varSelArgs, priArgs)
 
     return(out)
 }
-

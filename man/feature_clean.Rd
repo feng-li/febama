@@ -2,7 +2,7 @@
 % Please edit documentation in R/densities_features.R
 \name{feature_clean}
 \alias{feature_clean}
-\title{Delete the features with NaN and add attributes}
+\title{Remove features with missing values and add scaling attributes}
 \usage{
 feature_clean(lpd_features)
 }
@@ -10,8 +10,8 @@ feature_clean(lpd_features)
 \item{lpd_features}{A list of several outputs of \code{lpd_features_multi}.}
 }
 \value{
-A list with log predictive densities and features.
+A list with log predictive densities, cleaned features, and feature scaling metadata.
 }
 \description{
-Delete the features with NaN and add attributes
+Remove features with missing values and add scaling attributes
 }

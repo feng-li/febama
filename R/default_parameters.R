@@ -1,7 +1,7 @@
-#' Defualt parameter settings of FEBAMA framework
-#' 
+#' Default parameter settings for the FEBAMA framework
+#'
+#' @return A list of FEBAMA model, prior, and algorithm settings.
 #' @export
-
 model_conf_default <- function(){
   num_models = 4
   parameter_list = list(
@@ -45,4 +45,3 @@ model_conf_default <- function(){
   )
   parameter_list
 }
-

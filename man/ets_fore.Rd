@@ -2,7 +2,7 @@
 % Please edit documentation in R/models.R
 \name{ets_fore}
 \alias{ets_fore}
-\title{The forecasting model ETS basd on \code{forecast::ets}}
+\title{ETS forecasting model based on \code{forecast::ets}}
 \usage{
 ets_fore(x, train_h, PI_level)
 }
@@ -17,5 +17,5 @@ ets_fore(x, train_h, PI_level)
 A list including forecasting mean and sd.
 }
 \description{
-The forecasting model ETS basd on \code{forecast::ets}
+ETS forecasting model based on \code{forecast::ets}
 }

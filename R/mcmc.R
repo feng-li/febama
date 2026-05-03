@@ -6,7 +6,7 @@
 #'
 #' @param data A list with \code{lpd} and \code{feat} 
 #' (the output of function \code{lpd_features_multi}).
-#' @param model_conf Parameter settings of FEBAMA framework. Defualt \code{model_conf_default()}.
+#' @param model_conf Parameter settings for the FEBAMA framework. Defaults can be created by \code{model_conf_default()}.
 #' 
 #' @return \code{febama_mcmc} returns a list with the entries:
 #' \describe{

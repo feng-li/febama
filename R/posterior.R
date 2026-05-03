@@ -1,6 +1,6 @@
 #' Calculate the log posterior
 #'
-#' Calculate the log posterior of  unknown parameters in FEBAMA framework.
+#' Calculate the log posterior of unknown parameters in the FEBAMA framework.
 #' See \code{model_conf_default} for more information of parameter settings.
 #'
 #' @param data A list with \code{lpd} and \code{feat} 
@@ -10,6 +10,7 @@
 #' @param varSelArgs Variable selection settings.
 #' @param priArgs Parameter settings in the priors of \code{beta} and \code{betaIdx}.
 #' @param features_used The features used for forecast combination. 
+#' @param model_update Integer vector indicating which model components are updated.
 #' 
 #' @return \code{log_posterior} returns the value of log posterior.
 #' @export
@@ -110,4 +111,3 @@ betaVec2Lst = function(beta, betaIdx)
 
     return(beta_list)
 }
-

@@ -2,7 +2,7 @@
 % Please edit documentation in R/models.R
 \name{auto.arima_fore}
 \alias{auto.arima_fore}
-\title{The forecasting model ARIMA basd on \code{forecast::auto.arima}}
+\title{ARIMA forecasting model based on \code{forecast::auto.arima}}
 \usage{
 auto.arima_fore(x, train_h, PI_level)
 }
@@ -17,5 +17,5 @@ auto.arima_fore(x, train_h, PI_level)
 A list including forecasting mean and sd.
 }
 \description{
-The forecasting model ARIMA basd on \code{forecast::auto.arima}
+ARIMA forecasting model based on \code{forecast::auto.arima}
 }

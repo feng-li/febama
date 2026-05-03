@@ -15,9 +15,9 @@ logscore(data, beta, betaIdx, features_used, sum = TRUE)
 \item{betaIdx}{A list of indicator vectors.}
 
 \item{features_used}{The features used for forecast combination.
-See the parameter seting for more information.}
+See the parameter settings for more information.}
 
-\item{sum}{If TRUE, return the sume of log predictive densities.}
+\item{sum}{If TRUE, return the sum of log predictive densities.}
 }
 \value{
 \code{logscore} returns the value of log predictive score.

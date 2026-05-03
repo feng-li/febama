@@ -10,7 +10,7 @@ febama_mcmc(data, model_conf)
 \item{data}{A list with \code{lpd} and \code{feat}
 (the output of function \code{lpd_features_multi}).}
 
-\item{model_conf}{Parameter settings of FEBAMA framework. Defualt \code{model_conf_default()}.}
+\item{model_conf}{Parameter settings for the FEBAMA framework. Defaults can be created by \code{model_conf_default()}.}
 }
 \value{
 \code{febama_mcmc} returns a list with the entries:

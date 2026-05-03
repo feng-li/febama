@@ -15,6 +15,10 @@
 #' @param fore_model Character vector of base forecaster function names.
 #' @param features_used Character vector shared by each non-baseline model, or a
 #'   list with one character vector per non-baseline model.
+#' @param lpd_features_parallel Should historical predictive densities and
+#'   features be computed in parallel?
+#' @param ncores Number of worker cores to use when `lpd_features_parallel` is
+#'   `TRUE`.
 #' @param variable_selection Should feature-selection indicators be sampled?
 #' @param varsel_init Initial feature-selection state.
 #' @param beta_shrinkage Diagonal covariance scale for the coefficient prior.

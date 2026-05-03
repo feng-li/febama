@@ -2,7 +2,7 @@
 % Please edit documentation in R/models.R
 \name{naive_fore}
 \alias{naive_fore}
-\title{The forecasting model naive basd on \code{forecast::naive}}
+\title{Naive forecasting model based on \code{forecast::naive}}
 \usage{
 naive_fore(x, train_h, PI_level)
 }
@@ -17,5 +17,5 @@ naive_fore(x, train_h, PI_level)
 A list including forecasting mean and sd.
 }
 \description{
-The forecasting model naive basd on \code{forecast::naive}
+Naive forecasting model based on \code{forecast::naive}
 }

@@ -27,11 +27,13 @@ log_posterior(
 \item{varSelArgs}{Variable selection settings.}
 
 \item{features_used}{The features used for forecast combination.}
+
+\item{model_update}{Integer vector indicating which model components are updated.}
 }
 \value{
 \code{log_posterior} returns the value of log posterior.
 }
 \description{
-Calculate the log posterior of  unknown parameters in FEBAMA framework.
+Calculate the log posterior of unknown parameters in the FEBAMA framework.
 See \code{model_conf_default} for more information of parameter settings.
 }

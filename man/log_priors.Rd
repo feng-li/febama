@@ -21,6 +21,6 @@ log_priors(beta, betaIdx, varSelArgs, priArgs, sum = TRUE)
 \code{log_priors} returns the value of log joint prior.
 }
 \description{
-Calculate the log joint prior of  indicator vectors and  coefficient vectors.
+Calculate the log joint prior of indicator vectors and coefficient vectors.
 See \code{model_conf_default} for more information of parameter settings.
 }

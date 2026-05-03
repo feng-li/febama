@@ -2,10 +2,13 @@
 % Please edit documentation in R/default_parameters.R
 \name{model_conf_default}
 \alias{model_conf_default}
-\title{Defualt parameter settings of FEBAMA framework}
+\title{Default parameter settings for the FEBAMA framework}
 \usage{
 model_conf_default()
 }
+\value{
+A list of FEBAMA model, prior, and algorithm settings.
+}
 \description{
-Defualt parameter settings of FEBAMA framework
+Default parameter settings for the FEBAMA framework
 }

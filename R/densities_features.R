@@ -2,8 +2,8 @@
 #' 
 #' Compute log predictive densities and features for training in FEBAMA framework.
 #' 
-#' @param data A list with related information of a time series. Historical data \code{x} is neccessary.
-#' @param model_conf Parameter settings of FEBAMA framework. Defualt \code{model_conf_default()}.
+#' @param data A list with related information for a time series. Historical data \code{x} is required.
+#' @param model_conf Parameter settings for the FEBAMA framework. Defaults can be created by \code{model_conf_default()}.
 #' 
 #' @return A list with log predictive densities and features.
 #' @export
@@ -179,11 +179,11 @@ lpd_feat = function(t_seq, ts_sd, ts_nosd, model_conf, history_burn ){
 }
 
 
-#' Delete the features with NaN and add attributes
+#' Remove features with missing values and add scaling attributes
 #'
 #' @param lpd_features A list of several outputs of \code{lpd_features_multi}.
 #' 
-#' @return A list with log predictive densities and features. 
+#' @return A list with log predictive densities, cleaned features, and feature scaling metadata.
 #' @export
 feature_clean <- function(lpd_features){
     for (i_ts in 1:length(lpd_features)) {

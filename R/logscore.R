@@ -8,8 +8,8 @@
 #' @param beta A list of coefficient vectors of the features.
 #' @param betaIdx A list of indicator vectors. 
 #' @param features_used The features used for forecast combination. 
-#' See the parameter seting for more information.
-#' @param sum If TRUE, return the sume of log predictive densities.
+#' See the parameter settings for more information.
+#' @param sum If TRUE, return the sum of log predictive densities.
 #' 
 #' @return \code{logscore} returns the value of log predictive score.
 #' @export

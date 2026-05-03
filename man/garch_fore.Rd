@@ -2,7 +2,7 @@
 % Please edit documentation in R/models.R
 \name{garch_fore}
 \alias{garch_fore}
-\title{The forecasting model garch basd on \code{rugarch} package}
+\title{GARCH forecasting model based on the \code{rugarch} package}
 \usage{
 garch_fore(x, train_h, PI_level)
 }
@@ -11,12 +11,12 @@ garch_fore(x, train_h, PI_level)
 
 \item{train_h}{The amount of future time steps to forecast.}
 
-\item{PI_level}{This function don't use it in the calculation.
+\item{PI_level}{This function does not use it in the calculation.
 This is used to make this function consistent with the parameter setting of the top four models.}
 }
 \value{
 A list including forecasting mean and sd.
 }
 \description{
-The forecasting model garch basd on \code{rugarch} package
+GARCH forecasting model based on the \code{rugarch} package
 }

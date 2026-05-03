@@ -2,7 +2,7 @@
 % Please edit documentation in R/forecast.R
 \name{forecast_feature_results_multi}
 \alias{forecast_feature_results_multi}
-\title{Forecasting with FEBAMA}
+\title{Forecast with FEBAMA}
 \usage{
 forecast_feature_results_multi(
   ts,
@@ -19,7 +19,9 @@ forecast_feature_results_multi(
 \item{xx}{Real data in the forecasting horizon.}
 }}
 
-\item{model_conf}{Parameter settings of FEBAMA framework. Defualt \code{model_conf_default()}.}
+\item{model_conf}{Parameter settings for the FEBAMA framework. Defaults can be created by \code{model_conf_default()}.}
+
+\item{intercept}{Logical; should an intercept be included in the feature-weight model?}
 
 \item{data}{A list with
 \describe{
@@ -34,7 +36,7 @@ forecast_feature_results_multi(
 \value{
 \code{forecast_feature_results_multi} returns a list with the entries:
 \describe{
-\item{err_feature}{Log score, mase, smape measures of forecasts.}
+\item{err_feature}{Log score, MASE, and SMAPE measures of forecasts.}
 \item{ff_feature}{Forecast values in the forecasting horizon.}
 \item{w_time_varying}{Time-varying weights in the forecasting horizon.}
 }

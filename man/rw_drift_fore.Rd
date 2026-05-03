@@ -2,7 +2,7 @@
 % Please edit documentation in R/models.R
 \name{rw_drift_fore}
 \alias{rw_drift_fore}
-\title{The forecasting model random walk basd on \code{forecast::rwf}}
+\title{Random-walk forecasting model based on \code{forecast::rwf}}
 \usage{
 rw_drift_fore(x, train_h, PI_level)
 }
@@ -17,5 +17,5 @@ rw_drift_fore(x, train_h, PI_level)
 A list including forecasting mean and sd.
 }
 \description{
-The forecasting model random walk basd on \code{forecast::rwf}
+Random-walk forecasting model based on \code{forecast::rwf}
 }
