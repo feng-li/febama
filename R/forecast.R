@@ -215,10 +215,8 @@ w_get_ini <- function(beta_out, myfeatures_scaled, model_conf){
 forecast_feature_performance<-function(data)
 {
     ## log score
-    performance<-c()
-    for (i_ts in 1:length(data)) {
-        performance<-rbind(performance,data[[i_ts]]$err_feature)
-    }
+    performance <- do.call(rbind, lapply(data, function(x) x$err_feature))
+    performance <- as.matrix(performance)
 
     performance_out<- t(colMeans(performance))
 

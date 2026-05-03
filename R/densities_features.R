@@ -147,13 +147,13 @@ lpd_feat = function(t_seq, ts_sd, ts_nosd, model_conf, history_burn ){
     y = ts_nosd
     features_y <- matrix(nrow = length(t_seq), ncol = 42)
     myts <- list(list(x = ts(y[1:history_burn], frequency = frequency)))
-    colnames(features_y) <- colnames(THA_features(myts)[[1]]$features)
+    colnames(features_y) <- colnames(M4metalearning::THA_features(myts)[[1]]$features)
     
     if(is.null(feature_window)){
         for (t in t_seq)
         {
             myts <- list(list(x = ts(y[1:t], frequency = frequency)))
-            myfeatures <- THA_features(myts)[[1]]$features
+            myfeatures <- M4metalearning::THA_features(myts)[[1]]$features
             myfeatures <- data.matrix(myfeatures)
             features_y[(t - t_seq[1] + 1),] <- myfeatures
         }
@@ -162,11 +162,11 @@ lpd_feat = function(t_seq, ts_sd, ts_nosd, model_conf, history_burn ){
         {
             if(t <= feature_window){
                 myts <-list(list(x=ts(y[1:t], frequency = 1)))
-                myfeatures <- THA_features(myts)[[1]]$features
+                myfeatures <- M4metalearning::THA_features(myts)[[1]]$features
                 myfeatures <- data.matrix(myfeatures)
             }else{
                 myts <-list(list(x=ts(y[(t-feature_window+1):t], frequency = 1)))
-                myfeatures <- THA_features(myts)[[1]]$features
+                myfeatures <- M4metalearning::THA_features(myts)[[1]]$features
                 myfeatures <- data.matrix(myfeatures)
             }
             features_y[(t - t_seq[1] + 1),] <- myfeatures
@@ -194,4 +194,3 @@ feature_clean <- function(lpd_features){
     }
     return(lpd_features)
 }
-

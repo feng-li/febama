@@ -1,85 +1,117 @@
-# `febama`: Feature-based Bayesian Forecasting Model Averaging
+# febama
 
-**Short Introduction**: In this work, we propose a novel framework for density forecast combination by constructing time-varying weights based on time series features, which is called FEature-based BAyesian forecasting Model Averaging (FEBAMA). Our framework estimates weights in the forecast combination via Bayesian log predictive scores, in which the optimal forecasting combination is determined by time-series features from historical information. In particular, we use an automatic Bayesian variable selection method to weight the importance of different features. To this end, our approach has better interpretability compared to other black-box forecasting combination schemes.  
+Feature-based Bayesian Forecasting Model Averaging.
+
+`febama` is a framework for density forecast combination with time-varying
+weights based on time-series features. Each base model contributes a predictive
+density, features map to model weights through a softmax-style regression, and
+the coefficient vectors are estimated with Bayesian log predictive scores and
+optional variable selection.
 
 ## Installation
-You can install the package `febama` from GitHub Repository with:
-```
+
+Install the package from GitHub with:
+
+```r
 devtools::install_github("lily940703/febama")
 ```
-## Usage
-This part explains how to generate forecasts based on FEBAMA framework.
 
-### Packages we need
-```
+## Public API
+
+The recommended package entry points are:
+
+| Function | Purpose |
+| --- | --- |
+| `febama_config()` | Build the nested model configuration. |
+| `compute_lpd_features()` | Build historical log predictive densities and feature matrices. |
+| `clean_features()` | Drop unusable feature columns and keep scaling metadata. |
+| `fit_febama()` | Estimate feature-weight coefficients. |
+| `forecast_febama()` | Produce recursive combined forecasts. |
+| `summarize_performance()` | Aggregate log score, MASE, and SMAPE. |
+
+The lower-level functions, such as `lpd_features_multi()`, `febama_mcmc()`,
+and `forecast_feature_results_multi()`, remain exported for compatibility with
+the original research workflow.
+
+## Data Shape
+
+The training and forecasting functions expect each series to be a list with:
+
+- `x`: the in-sample time series.
+- `xx`: the held-out future values used by the current forecasting routine for
+  scoring.
+
+This matches the shape used by the M3/M4 examples in the original experiments.
+
+## Basic Workflow
+
+```r
 library(febama)
-library("tsfeatures")
-library("M4metalearning")
-library("forecast")
-library("mvtnorm")
-library(parallel)
-library(doParallel)
-library(foreach)
+
+config <- febama_config(
+  frequency = 12,
+  forecast_h = 18,
+  train_h = 1,
+  history_burn = 25,
+  fore_model = c("ets_fore", "naive_fore", "rw_drift_fore", "auto.arima_fore"),
+  features_used = c("x_acf1", "diff1_acf1", "entropy", "alpha", "beta", "unitroot_kpss")
+)
+
+lpd_features <- compute_lpd_features(series, config)
+lpd_features <- clean_features(lpd_features)
+
+fit <- fit_febama(lpd_features, config)
+
+forecast <- forecast_febama(
+  data = series,
+  config = config,
+  lpd_features = lpd_features,
+  fit = fit
+)
+
+summarize_performance(forecast)
 ```
 
-### Example data
-```
-# M3 monthly
-library(Mcomp)
-data_m3_mon <- Filter(function(l) l$period == "MONTHLY", M3)
+For a list of series, pass the list to the same functions:
 
-# Pick a time series randomly
-set.seed(2021-7-29)
-id = sample(1:length(data_m3_mon), 1)
-data_example = data_m3_mon[[id]]
+```r
+lpd_features <- compute_lpd_features(series_list, config)
+lpd_features <- clean_features(lpd_features)
+fits <- fit_febama(lpd_features, config)
+forecasts <- forecast_febama(series_list, config, lpd_features, fit = fits)
+summarize_performance(forecasts)
 ```
 
-### Training period
-```
-# 1. Training period
-# 1.1 Compute predictive densities and features
-model_conf_default = model_conf_default()
-lpd_features = lpd_features_multi(data = data_example, model_conf = model_conf_default)
+## Model Summary
 
-# If parallel
-model_conf_curr = model_conf_default
-model_conf_curr$lpd_features_parl = list(par = T, ncores = 2)
-lpd_features = lpd_features_multi(data = data_example, model_conf = model_conf_curr)
+For each historical cutoff, FEBAMA:
 
-# The features used
-lpd_features <- feature_clean(list(lpd_features))[[1]]
-fe <- lpd_features$feat
-fm <- lpd_features$feat_mean
-fs <- lpd_features$feat_sd
-lpd_features$feat<- fe[, unique(unlist(model_conf_curr$features))]
-lpd_features$feat_mean <- fm[unique(unlist(model_conf_curr$features))]
-lpd_features$feat_sd <- fs[unique(unlist(model_conf_curr$features))]
+1. fits each base forecaster in `config$fore_model`;
+2. evaluates each model's Gaussian predictive density for the next holdout
+   point;
+3. computes time-series features using `M4metalearning::THA_features()`;
+4. estimates feature coefficients by maximizing or sampling the log predictive
+   score with coefficient priors and optional feature-selection indicators.
 
-# Up to now, we obtain log predictive densities and features for training.
-head(lpd_features$lpd)
-head(lpd_features$feat)
+With `m` base forecasters, FEBAMA estimates `m - 1` feature-weight regressions.
+The last forecaster is the baseline component, which keeps the weights
+identified and makes the full weight vector sum to one.
 
-# 1.2 Inference procedure
-# (1) For FEBAMA
-parameters = febama_mcmc(data = lpd_features, model_conf = model_conf_curr)
-# (2) For FEBAMA+VS
-model_conf_curr$algArgs$nIter = 50
-parameters_vs = febama_mcmc(data = lpd_features, model_conf = model_conf_curr)
-```
+## Repository Layout
 
-### Forecasting period
-```
-# 2. Forecasting period
-# (1) For FEBAMA
-model_conf_curr$algArgs$nIter = 1
-data_example_fore = forecast_feature_results_multi(ts = data_example, model_conf = model_conf_curr,
-                                                   data = lpd_features, beta_out = parameters)
+```text
+R/
+  api.R                 # public wrappers and configuration helpers
+  default_parameters.R  # default model settings
+  densities_features.R  # historical density and feature construction
+  models.R              # base forecasting model wrappers
+  logscore.R            # log predictive score and gradient
+  priors.R              # coefficient and feature-selection priors
+  posterior.R           # posterior objective and gradient
+  mcmc.R                # MAP/SGLD/MCMC fitting
+  forecast.R            # recursive forecasting and performance summaries
 
-cat("The average LS and MASE of the example data based on FEBAMA method are \n", data_example_fore$err_feature[1]/18, data_example_fore$err_feature[2])
-
-# (2) For FEBAMA+VS
-model_conf_curr$algArgs$nIter = 50
-data_example_fore_vs = forecast_feature_results_multi(ts = data_example, model_conf = model_conf_curr,
-                               data = lpd_features, beta_out = parameters_vs)
-cat("The average LS and MASE of the example data based on FEBAMA+VS method are \n", data_example_fore_vs$err_feature[1]/18,data_example_fore_vs$err_feature[2])
+man/                    # generated package documentation
+docs/                   # methodology notes
+data/                   # saved training artifacts
 ```
