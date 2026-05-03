@@ -8,12 +8,34 @@ density, features map to model weights through a softmax-style regression, and
 the coefficient vectors are estimated with Bayesian log predictive scores and
 optional variable selection.
 
+The method is based on the published paper
+
+```
+@article{LiL2023BayesianForecast,
+  title = {Bayesian Forecast Combination Using Time-Varying Features},
+  author = {Li, Li and Kang, Yanfei and Li, Feng},
+  date = {2023-07},
+  journaltitle = {International Journal of Forecasting},
+  volume = {39},
+  number = {3},
+  pages = {1287--1302},
+  issn = {0169-2070},
+  doi = {10.1016/j.ijforecast.2022.06.002},
+  url = {https://arxiv.org/abs/2108.02082},
+  urldate = {2023-06-21},
+  language = {en},
+  keywords = {Bayesian density forecasting,Forecast combination,Interpretability,Log predictive score,Time-varying features}
+}
+
+```
+
+
 ## Installation
 
 Install the package from GitHub with:
 
 ```r
-devtools::install_github("lily940703/febama")
+devtools::install_github("feng-li/febama")
 ```
 
 ## Public API
