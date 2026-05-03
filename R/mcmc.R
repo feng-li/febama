@@ -231,19 +231,19 @@ MAP_gibbs <- function(data, beta_curr, betaIdx_curr, model_conf)
 SGLD_gibbs <- function(data, beta_curr, betaIdx_curr, model_conf)
 {
   nObs = nrow(data$lpd)
-  #nEpoch = model_conf$algArgs$sgld$nEpoch
-  stepsize = model_conf$algArgs$sgld$stepsize
-  burninProp = model_conf$algArgs$sgld$burninProp
+  sgldArgs = validate_sgld_settings(nObs, model_conf$algArgs$sgld)
+  stepsize = sgldArgs$stepsize
+  burninProp = sgldArgs$burninProp
   
   priArgs = model_conf$priArgs
   varSelArgs = model_conf$varSelArgs
   
   features_used = model_conf$features_used
   
-  max_batchSize = model_conf$algArgs$sgld$max_batchSize
-  batchSize = min(nObs, max_batchSize)
-  nBatch = round(nObs/batchSize)
-  nEpoch = round(200 / nBatch)
+  batchSize = min(nObs, sgldArgs$max_batchSize)
+  nBatch = ceiling(nObs / batchSize)
+  nEpoch = sgldArgs$nEpoch
+  nSgldIter = nEpoch * nBatch
   
   num_models_updated = ncol(data$lpd) - 1
   
@@ -251,6 +251,7 @@ SGLD_gibbs <- function(data, beta_curr, betaIdx_curr, model_conf)
   betaIdx_prop = betaIdx_curr
   
   beta_sgld = list()
+  accept_prob = vector("list", num_models_updated)
   for (iComp in 1:num_models_updated)
   {
     nPar_full = length(betaIdx_curr[[iComp]])
@@ -263,51 +264,50 @@ SGLD_gibbs <- function(data, beta_curr, betaIdx_curr, model_conf)
     }
     
     ## 2. conditional on this variable selection indicators, update beta via SGLD
-    beta_iComp_sgld = matrix(0, nEpoch * nBatch, nPar_full)
-    for (iIter in 1:(nEpoch * nBatch))
+    beta_iComp_sgld = matrix(0, nSgldIter, nPar_full)
+    for (iEpoch in 1:nEpoch)
     {
-      ## SGLD settings
-      if(is.na(stepsize)){ # decay stepsize
-        a = model_conf$algArgs$sgld$a
-        b = model_conf$algArgs$sgld$b
-        gama = model_conf$algArgs$sgld$gama
-        stepsize <- a * (b + iIter) ^ (-gama)
-      }
-      
       ## Re-split the data into small batches after finish one complete epoch.
-      if(iIter %in% seq(1, nEpoch * nBatch, nBatch))
+      dataIdxLst = make_sgld_batches(nObs, batchSize)
+      for (iBatch in seq_along(dataIdxLst))
       {
-        iBatch = 0
-        dataIdxLst = suppressWarnings(split(sample(1:nObs,nObs),1:nBatch))
+        iIter = (iEpoch - 1) * nBatch + iBatch
+        stepSizeCurr = sgld_step_size(stepsize, iIter, sgldArgs)
+
+        data_curr = lapply(data[c("lpd","feat")], function(x) x[dataIdxLst[[iBatch]], ,drop=FALSE])
+        batchRatio = length(dataIdxLst[[iBatch]]) / nObs # n/N
+
+        grad_iComp = log_posterior_grad(data = data_curr,
+                                        beta = beta_prop,
+                                        betaIdx = betaIdx_prop,
+                                        priArgs = priArgs,
+                                        varSelArgs = varSelArgs,
+                                        features_used = features_used,
+                                        model_update = iComp,
+                                        batchRatio = batchRatio)[[1]]
+
+        ## SGLD
+        betaIdxActive = betaIdx_prop[[iComp]] == 1
+        nPar1 = sum(betaIdxActive) # length of non-zero parameters
+        beta_new <- (as.vector(beta_prop[[iComp]][betaIdxActive] + stepSizeCurr / 2 * grad_iComp) +
+                       as.vector(mvtnorm::rmvnorm(1, rep(0, nPar1), stepSizeCurr * diag(nPar1))))
+
+        beta_iComp_sgld[iIter, betaIdxActive] = beta_new
+
+        beta_prop[[iComp]][betaIdxActive] = beta_new
+        beta_prop[[iComp]][!betaIdxActive] = 0
       }
-      iBatch = iBatch + 1
-      
-      data_curr = lapply(data[c("lpd","feat")], function(x) x[dataIdxLst[[iBatch]], ,drop=FALSE])
-      batchRatio = length(dataIdxLst[[iBatch]]) / nObs # n/N
-      
-      grad_iComp = log_posterior_grad(data = data_curr,
-                                      beta = beta_prop,
-                                      betaIdx = betaIdx_prop,
-                                      priArgs = priArgs,
-                                      varSelArgs = varSelArgs,
-                                      features_used = features_used,
-                                      model_update = iComp,
-                                      batchRatio = batchRatio)[[1]]
-      
-      ## SGLD
-      nPar1 = sum(betaIdx_prop[[iComp]]) # length of non-zero parameters
-      beta_new <- (as.vector(beta_prop[[iComp]][betaIdx_prop[[iComp]] == 1] + stepsize / 2 * grad_iComp) +
-                     as.vector(mvtnorm::rmvnorm(1, rep(0, nPar1), stepsize* diag(nPar1))))
-      
-      beta_iComp_sgld[iIter, betaIdx_prop[[iComp]] == 1] = beta_new
-      
-      beta_prop[[iComp]][betaIdx_prop[[iComp]] == 1] = beta_new
-      betaIdx_prop[[iComp]][betaIdx_prop[[iComp]] == 0] = 0
     }
     
     ## Polyak-Ruppert averaging improve the efficiency of SGLD
-    burnin = 1:(ceiling(burninProp * nEpoch * nBatch))
-    beta_prop[[iComp]] = colMeans(beta_iComp_sgld[-burnin,, drop = FALSE])
+    nDrop = floor(burninProp * nSgldIter)
+    keepRows = seq_len(nSgldIter)
+    if(nDrop > 0)
+    {
+      keepRows = keepRows[-seq_len(nDrop)]
+    }
+    beta_prop[[iComp]] = colMeans(beta_iComp_sgld[keepRows,, drop = FALSE])
+    beta_prop[[iComp]][betaIdx_prop[[iComp]] == 0] = 0
     beta_sgld[[iComp]] = beta_iComp_sgld
     
     ## Metropolis-Hasting accept/reject for variable selection
@@ -363,10 +363,78 @@ SGLD_gibbs <- function(data, beta_curr, betaIdx_curr, model_conf)
       beta_curr[[iComp]] <- beta_prop[[iComp]] ## Accepted
       ## betaIdx_curr unchanged.
     }
-    
+    accept_prob[[iComp]] <- accept_prob_curr
+
   }
-  
+
   out = list(beta = beta_curr, betaIdx = betaIdx_curr, 
-             accept_prob = accept_prob_curr, beta_sgld = beta_sgld)
+             accept_prob = accept_prob, beta_sgld = beta_sgld)
   return(out)
+}
+
+validate_sgld_settings <- function(nObs, sgldArgs)
+{
+  max_batchSize = as.integer(sgldArgs$max_batchSize)
+  if(length(max_batchSize) != 1 || is.na(max_batchSize) || max_batchSize < 1)
+  {
+    stop("`max_batchSize` must be a positive integer.", call. = FALSE)
+  }
+
+  nEpoch = as.integer(sgldArgs$nEpoch)
+  if(length(nEpoch) != 1 || is.na(nEpoch) || nEpoch < 1)
+  {
+    stop("`nEpoch` must be a positive integer.", call. = FALSE)
+  }
+
+  burninProp = sgldArgs$burninProp
+  if(!is.numeric(burninProp) || length(burninProp) != 1 ||
+     is.na(burninProp) || burninProp < 0 || burninProp >= 1)
+  {
+    stop("`burninProp` must be a number in [0, 1).", call. = FALSE)
+  }
+
+  stepsize = sgldArgs$stepsize
+  if(!is.numeric(stepsize) || length(stepsize) != 1 ||
+     (!is.na(stepsize) && stepsize <= 0))
+  {
+    stop("`stepsize` must be a positive number or NA.", call. = FALSE)
+  }
+
+  if(is.na(stepsize))
+  {
+    for (arg in c("a", "b", "gama"))
+    {
+      value = sgldArgs[[arg]]
+      if(!is.numeric(value) || length(value) != 1 || is.na(value) || value <= 0)
+      {
+        stop("SGLD decay parameters `a`, `b`, and `gama` must be positive numbers.",
+             call. = FALSE)
+      }
+    }
+  }
+
+  list(
+    max_batchSize = min(nObs, max_batchSize),
+    nEpoch = nEpoch,
+    burninProp = burninProp,
+    stepsize = stepsize,
+    a = sgldArgs$a,
+    b = sgldArgs$b,
+    gama = sgldArgs$gama
+  )
+}
+
+make_sgld_batches <- function(nObs, batchSize)
+{
+  idx = sample.int(nObs)
+  split(idx, ceiling(seq_along(idx) / batchSize))
+}
+
+sgld_step_size <- function(stepsize, iIter, sgldArgs)
+{
+  if(is.na(stepsize))
+  {
+    return(sgldArgs$a * (sgldArgs$b + iIter) ^ (-sgldArgs$gama))
+  }
+  stepsize
 }
