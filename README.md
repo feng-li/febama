@@ -157,6 +157,14 @@ Compare MAP and SGLD on the same rolling-origin S&P 500 density/features:
 Rscript inst/examples/sp500_compare_algorithms.R data/sp500_daily_percent_log_returns.csv
 ```
 
+Write the per-origin comparison table to CSV by passing an output path:
+
+```sh
+Rscript inst/examples/sp500_compare_algorithms.R \
+  data/sp500_daily_percent_log_returns.csv \
+  data/sp500_map_sgld_comparison.csv
+```
+
 For a plumbing-only run without the optional volatility-model packages:
 
 ```sh
@@ -174,6 +182,18 @@ The comparison script defaults to `n_iter = 2` so both algorithms perform an
 outer inference update. SGLD settings can be adjusted with
 `FEBAMA_SP500_SGLD_N_EPOCH`, `FEBAMA_SP500_SGLD_MAX_BATCH_SIZE`,
 `FEBAMA_SP500_SGLD_BURNIN_PROP`, and `FEBAMA_SP500_SGLD_STEPSIZE`.
+
+A one-origin fast-mode run on the bundled local S&P 500 return file produced:
+
+| Algorithm | Origin | Forecast | Actual | Log score | MASE | SMAPE | Time |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| MAP | 2443 | 0.257851 | 0.034263 | -1.446465 | 0.233567 | 153.0823 | 0.398s |
+| SGLD | 2443 | 0.257843 | 0.034263 | -1.446450 | 0.233559 | 153.0811 | 0.492s |
+
+In that smoke comparison, SGLD was slightly better on log score, MASE, and
+SMAPE, while MAP was slightly faster. The differences are tiny for this single
+origin; use more origins and the paper-style volatility models for a substantive
+empirical comparison.
 
 ## Model Summary
 
