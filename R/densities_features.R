@@ -12,6 +12,22 @@ tha_hw_parameters <- function(x) {
     hw_fit$par[1:3]
 }
 
+tha_unitroot_kpss <- function(x) {
+    kpss <- try(tsfeatures::unitroot_kpss(x), silent = TRUE)
+    if ("try-error" %in% class(kpss)) {
+        kpss <- NA_real_
+    }
+    stats::setNames(kpss, "unitroot_kpss")
+}
+
+tha_unitroot_pp <- function(x) {
+    pp <- try(tsfeatures::unitroot_pp(x), silent = TRUE)
+    if ("try-error" %in% class(pp)) {
+        pp <- NA_real_
+    }
+    stats::setNames(pp, "unitroot_pp")
+}
+
 add_feature_columns <- function(features, values, before = NULL) {
     values <- as.data.frame(values, check.names = FALSE)
     if (is.null(before)) {
@@ -37,8 +53,8 @@ tha_features <- function(dataset) {
         tsfeatures::stl_features,
         tsfeatures::stability,
         tha_hw_parameters,
-        tsfeatures::unitroot_kpss,
-        tsfeatures::unitroot_pp
+        tha_unitroot_kpss,
+        tha_unitroot_pp
     )
 
     lapply(dataset, function(serdat) {
@@ -142,7 +158,8 @@ lpd_features_multi <- function(data, model_conf) {
             cl,
             varlist = c(
                 "add_feature_columns", "lpd_feat", "tha_features",
-                "tha_heterogeneity", "tha_hw_parameters", model_conf$fore_model
+                "tha_heterogeneity", "tha_hw_parameters",
+                "tha_unitroot_kpss", "tha_unitroot_pp", model_conf$fore_model
             ),
             envir = environment(lpd_features_multi)
         )

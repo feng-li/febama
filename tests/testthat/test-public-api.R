@@ -83,6 +83,7 @@ test_that("public fitting and forecasting wrappers return expected shapes", {
   config <- tiny_config()
 
   lpd_features <- compute_lpd_features(series, config)
+  expect_true("unitroot_kpss" %in% colnames(lpd_features$feat))
   lpd_features <- clean_features(lpd_features)
   fit <- fit_febama(lpd_features, config)
   weights <- prepare_febama_weights(fit, config, burnin = 0)

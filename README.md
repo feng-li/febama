@@ -104,6 +104,46 @@ forecasts <- forecast_febama(series_list, config, lpd_features, fit = fits)
 summarize_performance(forecasts)
 ```
 
+## S&P 500 Paper Example
+
+The paper's stock-market experiment is implemented in
+`inst/examples/sp500.R`. It expects a CSV with either daily percent log returns
+or daily S&P 500 prices. By default it uses the paper-style settings: one-step
+forecasts, a 1,250-trading-day rolling model window, a 100-day feature window,
+GARCH/RGARCH/SV base models, and the 15 stock-market features from Table 3.
+
+Download and transform the daily S&P 500 closes from Yahoo Finance into the
+paper's daily percent log returns:
+
+```sh
+Rscript inst/examples/download_sp500.R data/sp500_daily_percent_log_returns.csv
+```
+
+This writes `date`, `close`, and `log_return`, where `log_return` is
+`100 * diff(log(close))` over January 4, 2010 to September 18, 2019.
+
+Update the rolling feature files used by the S&P 500 experiment:
+
+```sh
+Rscript inst/examples/update_sp500_features.R data/sp500_daily_percent_log_returns.csv
+```
+
+This writes `data/sp500_features_all.csv` with all 42 THA features and
+`data/sp500_features_table3.csv` with the 15 stock-market features listed in
+Table 3 of the paper.
+
+```sh
+Rscript inst/examples/sp500.R data/sp500_daily_percent_log_returns.csv
+```
+
+The paper-style volatility models require optional packages: `rugarch`,
+`highfrequency`, `xts`, and `stochvol`. For a plumbing-only run without those
+models:
+
+```sh
+FEBAMA_SP500_FAST=1 Rscript inst/examples/sp500.R path/to/sp500.csv
+```
+
 ## Model Summary
 
 For each historical cutoff, FEBAMA:
