@@ -178,7 +178,7 @@ w_get <- function(beta_out, myfeatures_scaled, model_conf){
         features_used_curr = model_conf$features_used[[iComp]]
         features0 = cbind(1, myfeatures_scaled[, features_used_curr, drop = FALSE])
         
-        me = features0 %*% t(betaCurr[-1,])
+        me = features0 %*% t(betaCurr[-1, , drop = FALSE])
         me[me>709] <- 709 # avoid overflow
         exp_lin[, iComp] = exp(me)
     }

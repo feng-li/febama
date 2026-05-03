@@ -86,12 +86,24 @@ sp500_paper_config <- function(fore_model = c("garch_fore", "rgarch_fore", "sv_f
                                history_burn = 1250,
                                roll = 1250,
                                feature_window = 100,
+                               features_used = sp500_feature_set(),
                                beta_shrinkage = 1000,
                                variable_selection = FALSE,
                                varsel_init = "all-in",
+                               init_optim = TRUE,
+                               alg_name = c("MAP", "sgld"),
                                n_iter = 1,
+                               max_batch_size = 108,
+                               n_epoch = 10,
+                               burnin_prop = 0.4,
+                               stepsize = 0.1,
+                               sgld_gamma = 0.55,
+                               sgld_a = 0.4,
+                               sgld_b = 10,
                                lpd_features_parallel = TRUE,
                                ncores = max(1L, parallel::detectCores() - 1L)) {
+  alg_name <- match.arg(alg_name)
+
   febama_config(
     frequency = 1,
     forecast_h = forecast_h,
@@ -101,15 +113,22 @@ sp500_paper_config <- function(fore_model = c("garch_fore", "rgarch_fore", "sv_f
     feature_window = feature_window,
     PI_level = 90,
     fore_model = fore_model,
-    features_used = sp500_feature_set(),
+    features_used = features_used,
     lpd_features_parallel = lpd_features_parallel,
     ncores = ncores,
     variable_selection = variable_selection,
     varsel_init = varsel_init,
     beta_shrinkage = beta_shrinkage,
-    init_optim = TRUE,
-    alg_name = "MAP",
-    n_iter = n_iter
+    init_optim = init_optim,
+    alg_name = alg_name,
+    n_iter = n_iter,
+    max_batch_size = max_batch_size,
+    n_epoch = n_epoch,
+    burnin_prop = burnin_prop,
+    stepsize = stepsize,
+    sgld_gamma = sgld_gamma,
+    sgld_a = sgld_a,
+    sgld_b = sgld_b
   )
 }
 

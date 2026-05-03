@@ -151,10 +151,17 @@ Run the paper-style FEBAMA example:
 Rscript inst/examples/sp500.R data/sp500_daily_percent_log_returns.csv
 ```
 
+Compare MAP and SGLD on the same rolling-origin S&P 500 density/features:
+
+```sh
+Rscript inst/examples/sp500_compare_algorithms.R data/sp500_daily_percent_log_returns.csv
+```
+
 For a plumbing-only run without the optional volatility-model packages:
 
 ```sh
 FEBAMA_SP500_FAST=1 Rscript inst/examples/sp500.R data/sp500_daily_percent_log_returns.csv
+FEBAMA_SP500_FAST=1 Rscript inst/examples/sp500_compare_algorithms.R data/sp500_daily_percent_log_returns.csv
 ```
 
 Control the number of rolling origins with `FEBAMA_SP500_ORIGINS`. For example:
@@ -162,6 +169,11 @@ Control the number of rolling origins with `FEBAMA_SP500_ORIGINS`. For example:
 ```sh
 FEBAMA_SP500_ORIGINS=3 Rscript inst/examples/sp500.R data/sp500_daily_percent_log_returns.csv
 ```
+
+The comparison script defaults to `n_iter = 2` so both algorithms perform an
+outer inference update. SGLD settings can be adjusted with
+`FEBAMA_SP500_SGLD_N_EPOCH`, `FEBAMA_SP500_SGLD_MAX_BATCH_SIZE`,
+`FEBAMA_SP500_SGLD_BURNIN_PROP`, and `FEBAMA_SP500_SGLD_STEPSIZE`.
 
 ## Model Summary
 

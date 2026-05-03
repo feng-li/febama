@@ -147,7 +147,10 @@ MAP_gibbs <- function(data, beta_curr, betaIdx_curr, model_conf)
     {
         nPar_full = length(betaIdx_curr[[iComp]])
 
-        betaIdx_prop[[iComp]] = c(1, stats::rbinom(nPar_full - 1, 1, prob = 0.5))
+        if(length(model_conf$varSelArgs[[iComp]]$cand) > 0)
+        {
+            betaIdx_prop[[iComp]] = c(1, stats::rbinom(nPar_full - 1, 1, prob = 0.5))
+        }
 
         beta_optim = stats::optim(unlist(beta_prop[[iComp]]), fn = log_posterior_comp,
                            data = data,
@@ -213,7 +216,7 @@ MAP_gibbs <- function(data, beta_curr, betaIdx_curr, model_conf)
         }
         else
         {
-            accept_prob_curr = 1 # SGLD always accepts
+            accept_prob_curr = 1
             beta_curr[[iComp]] <- beta_prop[[iComp]] ## Accepted
             ## betaIdx_curr unchanged.
         }
